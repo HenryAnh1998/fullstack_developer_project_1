@@ -9,4 +9,6 @@ DEBUG = True
 # Connect to the database
 
 
-SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:root@localhost:5432/artist_booking_sites'
+# TODO IMPLEMENT DATABASE URL
+SQLALCHEMY_DATABASE_URI = 'postgres://mitch:mufasa2019@localhost:5432/fyyur'
+SQLALCHEMY_TRACK_MODIFICATIONS = False

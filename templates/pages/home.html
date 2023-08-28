@@ -21,22 +21,5 @@
 	<div class="col-sm-6 hidden-sm hidden-xs">
 		<img id="front-splash" src="{{ url_for('static',filename='img/front-splash.jpg') }}" alt="Front Photo of Musical Band" />
 	</div>
-
 </div>
-<h2>This is the list of our start artists</h2>
-<ul class="items" style="display:grid;grid-template-columns:repeat(2,1fr)">
-	{% for artist in artists %}
-	<li>
-		<a href="/artists/{{ artist.id }}">
-			<i class="fas fa-users"></i>
-			<div class="item">
-				<h5>{{ artist.name }}</h5>
-				<div class="col-sm-6">
-					<img src="{{ artist.image_link }}" alt="Venue Image" />
-				</div>
-			</div>
-		</a>
-	</li>
-	{% endfor %}
-</ul>
 {% endblock %}
