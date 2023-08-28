@@ -16,18 +16,124 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import Form
 
 from forms import *
-from models import Artist, Show, Venue, db
 
 # App Config.
-
 
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
+
 migrate = Migrate(app, db)
 
-SQLALCHEMY_DATABASE_URI = 'postgres://mitch:mufasa2019@localhost:5432/fyyur'
+SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:root@localhost:5433/artist_booking_sites'
+
+class Artist(db.Model):
+    __tablename__ = 'artists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    city = db.Column(db.String(120))
+    state = db.Column(db.String(120))
+    phone = db.Column(db.String(120))
+    genres = db.Column(db.String(120))
+    image_link = db.Column(db.String(500))
+    facebook_link = db.Column(db.String(120))
+    facebook_link = db.Column(db.String(120))
+    website = db.Column(db.String(120))
+    seeking_venue = db.Column(db.Boolean, nullable=False, default=False)
+    seeking_description = db.Column(db.String(120))
+
+    # venues = db.relationship('Venue', secondary='shows')
+    # shows = db.relationship('Show', backref='artists')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'city': self.city,
+            'state': self.state,
+            'phone': self.phone,
+            'genres': self.genres.split(','),  # convert string to list
+            'image_link': self.image_link,
+            'facebook_link': self.facebook_link,
+            'website': self.website,
+            'seeking_venue': self.seeking_venue,
+            'seeking_description': self.seeking_description,
+        }
+
+    def __repr__(self):
+        return f'<Artist {self.id} {self.name}>'
+
+class Venue(db.Model):
+    __tablename__ = 'venues'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    city = db.Column(db.String(120))
+    state = db.Column(db.String(120))
+    address = db.Column(db.String(120))
+    phone = db.Column(db.String(120))
+    genres = db.Column(db.String(120))
+    image_link = db.Column(db.String(500))
+    facebook_link = db.Column(db.String(120))
+    web_site = db.Column(db.String(120))
+    seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
+    seeking_description = db.Column(db.String(120))
+
+    # artists = db.relationship('Artist', secondary='shows')
+    # shows = db.relationship('Show', backref='venues')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'city': self.city,
+            'state': self.state,
+            'address': self.address,
+            'phone': self.phone,
+            'genres': self.genres.split(','),  # convert string to list
+            'image_link': self.image_link,
+            'facebook_link': self.facebook_link,
+            'web_site': self.web_site,
+            'seeking_talent': self.seeking_talent,
+            'seeking_description': self.seeking_description,
+        }
+
+    def __repr__(self):
+        return f'<Venue {self.id} {self.name}>'
+
+class Show(db.Model):
+    __tablename__ = 'shows'
+
+    id = db.Column(db.Integer, primary_key=True)
+    artist_id = db.Column(db.Integer, db.ForeignKey(
+        'artists.id'), nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey(
+        'venues.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+
+    venue = db.relationship('Venue')
+    artist = db.relationship('Artist')
+
+
+    def show_artist(self):
+        return {
+            'artist_id': self.artist_id,
+            'artist_name': self.artist.name,
+            'artist_image_link': self.artist.image_link,
+            # convert datetime to string
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+    def show_venue(self):
+        return {
+            'venue_id': self.venue_id,
+            'venue_name': self.venue.name,
+            'venue_image_link': self.venue.image_link,
+            # convert datetime to string
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S')
+        }
 
 # Filters.
 
@@ -197,7 +303,7 @@ def create_venue_submission():
     except:
         error = True
         db.session.rollback()
-        print(sys.exc_info())
+        print(sys.exception())
     finally:
         db.session.close()
         if error:
@@ -228,14 +334,10 @@ def venues():
         else:
             if prev_city is not None:
                 data.append(tmp)
-            tmp = {}
-            tmp['city'] = venue.city
-            tmp['state'] = venue.state
-            tmp['venues'] = [venue_data]
+            tmp = {'city': venue.city, 'state': venue.state, 'venues': [venue_data]}
         prev_city = venue.city
         prev_state = venue.state
-
-    data.append(tmp)
+        data.append(tmp)
     return render_template('pages/venues.html', areas=data)
 
 
@@ -253,9 +355,7 @@ def search_venues():
         tmp['num_upcoming_shows'] = len(venue.shows)
         data.append(tmp)
 
-    response = {}
-    response['count'] = len(data)
-    response['data'] = data
+    response = {'count': len(data), 'data': data}
 
     return render_template('pages/search_venues.html',
                            results=response,
