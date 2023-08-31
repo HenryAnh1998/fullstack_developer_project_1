@@ -1,20 +1,16 @@
 # Imports
 
-import json
 import logging
 import os
 import sys
 from logging import FileHandler, Formatter
 
-import babel
-import dateutil.parser
 from flask import (Flask, Response, flash, jsonify, redirect, render_template,
                    request, url_for)
 from flask_migrate import Migrate
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf import Form
-
+import datetime
 from forms import *
 
 # App Config.
@@ -27,6 +23,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:root@localhost:5433/artist_booking_sites'
+
 
 class Artist(db.Model):
     __tablename__ = 'artists'
@@ -44,8 +41,8 @@ class Artist(db.Model):
     seeking_venue = db.Column(db.Boolean, nullable=False, default=False)
     seeking_description = db.Column(db.String(120))
 
-    # venues = db.relationship('Venue', secondary='shows')
-    # shows = db.relationship('Show', backref='artists')
+    venues = db.relationship('Venue', secondary='shows')
+    shows = db.relationship('Show', backref='artists')
 
     def to_dict(self):
         return {
@@ -65,6 +62,7 @@ class Artist(db.Model):
     def __repr__(self):
         return f'<Artist {self.id} {self.name}>'
 
+
 class Venue(db.Model):
     __tablename__ = 'venues'
 
@@ -81,8 +79,8 @@ class Venue(db.Model):
     seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
     seeking_description = db.Column(db.String(120))
 
-    # artists = db.relationship('Artist', secondary='shows')
-    # shows = db.relationship('Show', backref='venues')
+    artists = db.relationship('Artist', secondary='shows')
+    shows = db.relationship('Show', backref='venues')
 
     def to_dict(self):
         return {
@@ -103,6 +101,7 @@ class Venue(db.Model):
     def __repr__(self):
         return f'<Venue {self.id} {self.name}>'
 
+
 class Show(db.Model):
     __tablename__ = 'shows'
 
@@ -115,7 +114,6 @@ class Show(db.Model):
 
     venue = db.relationship('Venue')
     artist = db.relationship('Artist')
-
 
     def show_artist(self):
         return {
@@ -135,20 +133,8 @@ class Show(db.Model):
             'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S')
         }
 
+
 # Filters.
-
-
-def format_datetime(value, format='medium'):
-    date = dateutil.parser.parse(value)
-    if format == 'full':
-        format = "EEEE MMMM, d, y 'at' h:mma"
-    elif format == 'medium':
-        format = "EE MM, dd, y h:mma"
-    return babel.dates.format_datetime(date, format)
-
-
-app.jinja_env.filters['datetime'] = format_datetime
-
 # Controllers.
 
 
@@ -158,6 +144,7 @@ def index():
 
 
 pass
+
 
 # Artists
 # Create Artist
@@ -197,6 +184,7 @@ def create_artist_submission():
                   ' was successfully listed!')
         return render_template('pages/home.html')
 
+
 # Get Artist
 
 
@@ -212,9 +200,9 @@ def show_artist(artist_id):
     artist = Artist.query.get(artist_id)
 
     past_shows = list(filter(lambda x: x.start_time <
-                             datetime.today(), artist.shows))
+                                       datetime.today(), artist.shows))
     upcoming_shows = list(filter(lambda x: x.start_time >=
-                                 datetime.today(), artist.shows))
+                                           datetime.today(), artist.shows))
 
     past_shows = list(map(lambda x: x.show_venue(), past_shows))
     upcoming_shows = list(map(lambda x: x.show_venue(), upcoming_shows))
@@ -225,6 +213,7 @@ def show_artist(artist_id):
     data['past_shows_count'] = len(past_shows)
     data['upcoming_shows_count'] = len(upcoming_shows)
     return render_template('pages/show_artist.html', artist=data)
+
 
 # Update Artist
 
@@ -275,6 +264,7 @@ def search_artists():
                            results=response,
                            search_term=request.form.get('search_term', ''))
 
+
 # Venues
 #  Create Venue
 
@@ -303,7 +293,7 @@ def create_venue_submission():
     except:
         error = True
         db.session.rollback()
-        print(sys.exception())
+        print(sys.exc_info())
     finally:
         db.session.close()
         if error:
@@ -367,9 +357,9 @@ def show_venue(venue_id):
     venue = Venue.query.get(venue_id)
 
     past_shows = list(filter(lambda x: x.start_time <
-                             datetime.today(), venue.shows))
+                                       datetime.today(), venue.shows))
     upcoming_shows = list(filter(lambda x: x.start_time >=
-                                 datetime.today(), venue.shows))
+                                           datetime.today(), venue.shows))
 
     past_shows = list(map(lambda x: x.show_artist(), past_shows))
     upcoming_shows = list(map(lambda x: x.show_artist(), upcoming_shows))
@@ -420,6 +410,7 @@ def edit_venue_submission(venue_id):
                   ' was successfully updated!')
     return redirect(url_for('show_venue', venue_id=venue_id))
 
+
 #  Shows
 
 
@@ -435,10 +426,13 @@ def shows():
             'artist_id': show.artist.id,
             'artist_name': show.artist.name,
             'artist_image_link': show.artist.image_link,
-            'start_time': show.start_time.isoformat()
+            'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
         })
-
-    return render_template('pages/shows.html', shows=data)
+        print(data)
+    response = {'count': len(data), 'data': data}
+    return render_template('pages/shows.html',
+                           results=response,
+                           search_term=request.form.get('search_term', ''))
 
 
 @app.route('/shows/create')
